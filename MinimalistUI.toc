@@ -1,0 +1,21 @@
+## Interface: 90002
+## Title: MinimalistUI
+## Author: Alexey Malykh
+## Version: 0.1
+## Notes: User interface for minimalists
+## SavedVariables: MinimalistUI_DB
+## OptionalDeps: Ace3, LibStub, CallbackHandler-1.0
+
+#@no-lib-strip@
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\AceGUI-3.0\AceGUI-3.0.xml
+Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\AceDBOptions-3.0\AceDBOptions-3.0.xml
+#@end-no-lib-strip@
+
+Main.lua
+
+# Load modules
+Modules\UnitFrames.lua
