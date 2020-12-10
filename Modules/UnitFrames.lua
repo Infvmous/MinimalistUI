@@ -4,57 +4,57 @@ local UnitFrames = MinimalistUI:CreateModule("Unit Frames")
 local playerFrame = PlayerFrame
 local targetFrame = TargetFrame
 local focusFrame = FocusFrame
+local playerLevelText = PlayerLevelText
 
--- Size of icons for combat indicator
---local iconWidth  = 30
---local iconHeight = 30
+local sb = _G.GameTooltipStatusBar
+local	UnitIsPlayer, UnitIsConnected, UnitClass, RAID_CLASS_COLORS, PlayerFrameHealthBar =
+		UnitIsPlayer, UnitIsConnected, UnitClass, RAID_CLASS_COLORS, PlayerFrameHealthBar
+local _, class, c
 
+local feedbackText = playerFrame:CreateFontString(nil, "OVERLAY", "NumberFontNormalHuge")
 
--- Class colors
---local sb = _G.GameTooltipStatusBar
---local	UnitIsPlayer, UnitIsConnected, UnitClass, RAID_CLASS_COLORS, PlayerFrameHealthBar =
---		UnitIsPlayer, UnitIsConnected, UnitClass, RAID_CLASS_COLORS, PlayerFrameHealthBar
---local _, class, c
-
--- Feedback text
---local feedbackText = PlayerFrame:CreateFontString(nil, "OVERLAY", "NumberFontNormalHuge")
-
--- Sizes for buffs, castbars, ui etc
---local minVal = 0.65
---local maxVal = 1.5
---local sliderStep = 0.01
---local sliderBigStep = 0.05
-
+local playerRoleIcon = _G[playerFrame:GetName().."RoleIcon"];
 
 local eventHandler = CreateFrame("Frame", nil , UIParent)
 eventHandler:SetScript("OnEvent", function(self, event, ...) return self[event](self, ...) end)
 
-
 function UnitFrames:OnLoad()
-	-- Combat indicators
-	self:EnableCombatIndicator(self.db.combatIndicator)
+	-- Class colors
+   eventHandler:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+	hooksecurefunc("UnitFrameHealthBar_Update", self.ColorStatusbar)
+	hooksecurefunc("HealthBar_OnValueChanged", function(self)
+      UnitFrames.ColorStatusbar(self, self.unit)
+   end)
 
-	--eventHandler:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+   hooksecurefunc("PlayerFrame_UpdateStatus", function()
+      self:HideRestingStatus(self.db.hideRestingStatus)
+   end)
 
-	--hooksecurefunc("UnitFrameHealthBar_Update", self.ColorStatusbar)
-	--hooksecurefunc("HealthBar_OnValueChanged", function(self)
-	--	UnitFrames.ColorStatusbar(self, self.unit)
-	--end)
-	
-	--self:HidePvPIcons(self.db.hidePvpIcons)
-	--self:HideFeedbackText(self.db.hideFeedbackText)
+   hooksecurefunc("PlayerFrame_UpdateLevelTextAnchor", function()
+      self:EnableCombatIndicator(self.db.combatIndicator)
+   end)
+
+   hooksecurefunc("PlayerFrame_UpdateRolesAssigned", function()
+      self:HideRoleIcon(self.db.hideRoleIcon)
+   end)
+
+   self:HideAttackGlowOnPlayerFrame(self.db.hideAttackGlowOnPlayerFrame)
+   self:HideFeedbackText(self.db.hideFeedbackText)
+	self:HidePvPIcons(self.db.hidePvpIcons)
+
+   
+
 	--self:MoveTargetOfTarget(self.db.moveTargetOfTarget)
-	--self:HandleCombatIndicator(self.db.combatIndicator)
 
 	--hooksecurefunc("PlayerFrame_UpdateStatus", function()
- --   	self:HideRestingStatus(self.db.hideRestingStatus)
+ --   	
 
  --   	-- Hide Player leader/guide icons
  --   	PlayerGuideIcon:Hide()
 	--	PlayerLeaderIcon:Hide()
 
 	--	-- Hide combat flashing animation
-	--	PlayerFrameFlash:Hide()
+	--	
 	--end)
 
 	--hooksecurefunc("TargetFrame_Update", function()
@@ -79,9 +79,10 @@ end
 
 
 function UnitFrames:OnProfileChange()
-	--self:HandleCombatIndicator(self.db.combatIndicator)
-	--self:HidePvPIcons(self.db.hidePvpIcons)
-	--self:HideFeedbackText(self.db.hideFeedbackText)
+	self:EnableCombatIndicator(self.db.combatIndicator)
+   self:HideFeedbackText(self.db.hideFeedbackText)
+	self:HidePvPIcons(self.db.hidePvpIcons)
+	
 	--self:MoveTargetOfTarget(self.db.moveTargetOfTarget)
 
 	--hooksecurefunc("PlayerFrame_UpdateStatus", function()
@@ -90,68 +91,60 @@ function UnitFrames:OnProfileChange()
 
 	--self:ChangeCastBarSize(self.db.castBarSize)
 
-	--UnitFrameHealthBar_Update(PlayerFrameHealthBar, "player")
-	--UnitFrameHealthBar_Update(TargetFrameHealthBar, "target")
-	--UnitFrameHealthBar_Update(FocusFrameHealthBar, "focus")
+	UnitFrameHealthBar_Update(PlayerFrameHealthBar, "player")
+	UnitFrameHealthBar_Update(TargetFrameHealthBar, "target")
+	UnitFrameHealthBar_Update(FocusFrameHealthBar, "focus")
 end
 
+function eventHandler:UPDATE_MOUSEOVER_UNIT()
+	if UnitFrames.db.classColors[3] then
+		UnitFrames.ColorStatusbar(sb, "mouseover") end
+end
 
--- Class colors on health bars
---function eventHandler:UPDATE_MOUSEOVER_UNIT()
---	if UnitFrames.db.classColors[3] then
---		UnitFrames.ColorStatusbar(sb, "mouseover") end
---end
-
-
---function UnitFrames.ColorStatusbar(statusbar, unit)
---	if statusbar == PlayerFrameHealthBar and not
---			UnitFrames.db.classColors[1] then return
---	end
+function UnitFrames.ColorStatusbar(statusbar, unit)
+	if statusbar == PlayerFrameHealthBar and not
+			UnitFrames.db.classColors[1] then return
+	end
 	
---	if statusbar ~= PlayerFrameHealthBar and
---			statusbar ~= sb and not
---			UnitFrames.db.classColors[2] then return
---	end
+	if statusbar ~= PlayerFrameHealthBar and
+      statusbar ~= sb and not
+      UnitFrames.db.classColors[2] then return
+	end
 
---	if UnitIsPlayer(unit) and
---			UnitIsConnected(unit) and
---			UnitClass(unit) then
---		if unit == statusbar.unit or statusbar == sb then
---			_, class = UnitClass(unit)
---			c = RAID_CLASS_COLORS[class]
---			statusbar:SetStatusBarColor(c.r, c.g, c.b)
---		end
---	end
---end
+	if UnitIsPlayer(unit) and UnitIsConnected(unit) and UnitClass(unit) then
+		if unit == statusbar.unit or statusbar == sb then
+			_, class = UnitClass(unit)
+			c = RAID_CLASS_COLORS[class]
+			statusbar:SetStatusBarColor(c.r, c.g, c.b)
+		end
+	end
+end
 
+function UnitFrames:HideFeedbackText(hide)
+	self.db.hideFeedbackText = hide
+	if hide then
+		playerFrame.feedbackText = feedbackText
+		playerFrame.feedbackStartTime = 0
+		PetFrame.feedbackText = feedbackText
+		PetFrame.feedbackStartTime = 0
 
--- Toggle for feedback text
---function UnitFrames:HideFeedbackText(hide)
---	self.db.hideFeedbackText = hide
---	if hide then
---		PlayerFrame.feedbackText = feedbackText
---		PlayerFrame.feedbackStartTime = 0
---		PetFrame.feedbackText = feedbackText
---		PetFrame.feedbackStartTime = 0
-
---		PlayerHitIndicator:Hide()
---		PetHitIndicator:Hide()
---	else
---		local time = GetTime()
---		PlayerFrame.feedbackText = PlayerHitIndicator
---		PlayerFrame.feedbackStartTime = time
---		PetFrame.feedbackText = PetHitIndicator
---		PetFrame.feedbackStartTime = time
---	end
---end
-
+		PlayerHitIndicator:Hide()
+		PetHitIndicator:Hide()
+	else
+		local time = GetTime()
+		playerFrame.feedbackText = PlayerHitIndicator
+		playerFrame.feedbackStartTime = time
+		PetFrame.feedbackText = PetHitIndicator
+		PetFrame.feedbackStartTime = time
+	end
+end
 
 -- Combat indicators for target & focus
 function UnitFrames:AddCombatIconTextureTo(frame)
 	local texture = frame:CreateTexture(nil, "BACKGROUND")
 	texture:SetTexture("Interface\\CHARACTERFRAME\\UI-StateIcon.blp")
 	texture:SetTexCoord(.5, 1, 0, .484375)
-	texture:SetWidth(32)
+	texture:SetWidth(31)
 	texture:SetHeight(31)
 	texture:SetPoint("TOPLEFT")
 	return texture
@@ -172,19 +165,42 @@ local targetCombatIconFrame = UnitFrames:CreateCombatIconFrameOn(targetFrame)
 local focusCombatIconFrame = UnitFrames:CreateCombatIconFrameOn(focusFrame)
 
 function UnitFrames:ToggleCombatIndicator(parentFrame, indicator, unit)
-	if UnitAffectingCombat(unit) then
-		indicator:Show()
-		parentFrame.levelText:Hide()
+	local unitEffectiveLevel = UnitEffectiveLevel(unit)
+   if UnitAffectingCombat(unit) then
+		if unitEffectiveLevel < 0 then
+         unit.highLevelTexture:Hide()
+      end
+      indicator:Show()
+      parentFrame.levelText:Hide()
 	else
-		indicator:Hide()
-		parentFrame.levelText:Show()
+      indicator:Hide()
+      if unitEffectiveLevel > 0 then
+         parentFrame.levelText:Show()
+      else
+         parentFrame.levelText:Hide()
+      end
 	end
+end
+
+function UnitFrames:ToggleLevelTextOnPlayerFrame() 
+   local player = "player"
+   if UnitAffectingCombat(player) then
+      if IsResting(player) and self.db.hideRestingStatus then
+         PlayerAttackIcon:Show()
+      elseif IsResting(player) and not self.db.hideRestingStatus then
+         PlayerAttackIcon:Hide()
+      end
+      playerLevelText:Hide()
+   else
+      playerLevelText:Show()
+   end
 end
 
 function UnitFrames:EnableCombatIndicator(enable)
 	self.db.combatIndicator = enable
 	if enable then
 		eventHandler:SetScript("OnUpdate", function()
+         self:ToggleLevelTextOnPlayerFrame()
 			self:ToggleCombatIndicator(targetFrame, targetCombatIconFrame, "target")
 			self:ToggleCombatIndicator(focusFrame, focusCombatIconFrame, "focus")
 		end)
@@ -194,26 +210,68 @@ function UnitFrames:EnableCombatIndicator(enable)
 		focusCombatIconFrame:Hide()
 		targetFrame.levelText:Show()
 		focusFrame.levelText:Show()
+      playerLevelText:Show()
 	end
 end
 
+function UnitFrames:HidePvPIcons(hide)
+	self.db.hidePvpIcons = hide
+	hide = hide and 0 or 1
+	PlayerPVPIcon:SetAlpha(hide)
+	PlayerPrestigeBadge:SetAlpha(hide)
+	PlayerPrestigePortrait:SetAlpha(hide)
+	TargetFrameTextureFramePVPIcon:SetAlpha(hide)
+	TargetFrameTextureFramePrestigeBadge:SetAlpha(hide)
+	TargetFrameTextureFramePrestigePortrait:SetAlpha(hide)
+	FocusFrameTextureFramePVPIcon:SetAlpha(hide)
+	FocusFrameTextureFramePrestigeBadge:SetAlpha(hide)
+	FocusFrameTextureFramePrestigePortrait:SetAlpha(hide)
+end
 
--- Hide PvP and Prestige icons on unit frames
---function UnitFrames:HidePvPIcons(hide)
---	self.db.hidePvpIcons = hide
-	
---	hide = hide and 0 or 1
---	PlayerPVPIcon:SetAlpha(hide)
---	PlayerPrestigeBadge:SetAlpha(hide)
---	PlayerPrestigePortrait:SetAlpha(hide)
---	TargetFrameTextureFramePVPIcon:SetAlpha(hide)
---	TargetFrameTextureFramePrestigeBadge:SetAlpha(hide)
---	TargetFrameTextureFramePrestigePortrait:SetAlpha(hide)
---	FocusFrameTextureFramePVPIcon:SetAlpha(hide)
---	FocusFrameTextureFramePrestigeBadge:SetAlpha(hide)
---	FocusFrameTextureFramePrestigePortrait:SetAlpha(hide)
+function UnitFrames:HideRestingStatus(hide)
+   self.db.hideRestingStatus = hide
+   self.UpdateRestingStatus()
+end
+
+function UnitFrames:UpdateRestingStatus()
+   if UnitFrames.db.hideRestingStatus then
+      if IsResting("player") then
+         PlayerStatusTexture:Hide()
+         PlayerRestGlow:Hide()
+         PlayerRestIcon:Hide()
+         PlayerStatusGlow:Hide()
+      end
+   else
+      if IsResting("player") then
+         PlayerStatusTexture:Show()
+         PlayerRestGlow:Show()
+         PlayerRestIcon:Show()
+         PlayerStatusGlow:Show()
+      end
+   end
+end
+
+function UnitFrames:HideAttackGlowOnPlayerFrame(hide)
+   self.db.hideAttackGlowOnPlayerFrame = hide
+   if hide then PlayerAttackGlow:Hide()
+   else PlayerAttackGlow:Show() end
+end
+
+function UnitFrames:HideRoleIcon(hide)
+   self.db.hideRoleIcon = hide 
+   if hide then PlayerFrameRoleIcon:Hide()
+   else PlayerFrameRoleIcon:Show() end
+end
+
+--function UnitFrames:HideFrameCombatFlashing(hide)
+--   self.db.hideFrameCombatFlashing = hide
+--   if hide then
+--      PlayerAttackGlow:Hide()
+--   else
+--      -- Bring back frame flash
+--      PlayerAttackGlow:Show()
+--   end
 --end
-
 
 -- Move Target of Target and Focus to the right
 --function UnitFrames:MoveTargetOfTarget(move)
@@ -242,30 +300,7 @@ end
 --end
 
 
--- Disable Resting Indicator
---function UnitFrames:HideRestingStatus(hide)
---	self.db.hideRestingStatus = hide
---	self.UpdateRestingStatus()
---end
 
-
---function UnitFrames:UpdateRestingStatus()
---    if UnitFrames.db.hideRestingStatus then
---        if IsResting("player") then
---            PlayerStatusTexture:Hide()
---            PlayerRestGlow:Hide()
---            PlayerRestIcon:Hide()
---            PlayerStatusGlow:Hide()
---        end
---    else
---        if IsResting("player") then
---            PlayerStatusTexture:Show()
---            PlayerRestGlow:Show()
---            PlayerRestIcon:Show()
---            PlayerStatusGlow:Show()
---        end
---    end
---end
 
 -- TODO: Hide role on player frame
 -- TODO: Hide leader status of group on player frame
@@ -273,46 +308,83 @@ end
 
 UnitFrames.defaultSettings = {
 	combatIndicator = true,
-	--hidePvpIcons = true,
-	--hideFeedbackText = true,
+   hideAttackGlowOnPlayerFrame = true,
+   hideFeedbackText = true,
+	hidePvpIcons = true,
+   hideRestingStatus = true,
+   hideRoleIcon = true,
+   --hideFrameCombatFlashing = true,
 	--moveTargetOfTarget = true,
-	--hideRestingStatus = true,
-	--classColors = {
-	--	false,	-- Player
-	--	false,	-- Others
-	--	false	-- Tooltip
-	--},
+	
+	
 	--playerCastBarSize = 1,
 	--targetCastBarSize = 1,
 	--focusCastBarSize = 1,
+   classColors = {
+      false,   -- Player
+      false,   -- Others
+      false -- Tooltip
+   },
 }
 
-
 UnitFrames.optionsTable = {
-	combatIndicator = {
-		name = "Combat Indicators",
-		desc = "Small Icon indicating when target & focus are in combat",
+   hideFeedbackText = {
+      name = "Hide Feedback Text",
+      desc = "Healing and Damage text on the player & pet portraits",
+      type = "toggle",
+      width = "full",
+      order = 1,
+      set = function(info, val) UnitFrames:HideFeedbackText(val) end,
+   },
+	hidePvpIcons = {
+		name = "Hide PvP Icons",
+		desc = "Icons indicating if a player is flagged for PvP and prestige badges",
 		type = "toggle",
 		width = "full",
-		order = 1,
-		set = function(info, val) UnitFrames:HandleCombatIndicator(val) end,
+		order = 2,
+		set = function(info, val) UnitFrames:HidePvPIcons(val) end,
 	},
-	--hidePvpIcons = {
-	--	name = "Hide PvP Icons",
-	--	desc = "Icons indicating if a player if flagged for PvP and/or prestige badge",
-	--	type = "toggle",
-	--	width = "full",
-	--	order = 2,
-	--	set = function(info, val) UnitFrames:HidePvPIcons(val) end,
-	--},
-	--hideFeedbackText = {
-	--	name = "Hide Feedback Text",
-	--	desc = "Healing/damage text on the player & pet portraits",
-	--	type = "toggle",
-	--	width = "full",
-	--	order = 3,
-	--	set = function(info, val) UnitFrames:HideFeedbackText(val) end,
-	--},
+   hideRestingStatus = {
+      name = "Hide Resting Icon and Resting Glow",
+      desc = "Icon and yellow glow which is indicating that player in rest zone",
+      type = "toggle",
+      width = "full",
+      order = 3,
+      set = function(info, val) UnitFrames:HideRestingStatus(val) end,
+   },
+   hideRoleIcon = {
+      name = "Hide Role Icon",
+      desc = "Icon indicating role assigned",
+      type = "toggle",
+      width = "full",
+      order = 4,
+      set = function(info, val) UnitFrames:HideRoleIcon(val) end,
+   },
+   combat = {
+      name = "Combat",
+      type = "group",
+      inline = true,
+      order = 6,
+      args = {
+         combatIndicator = {
+            name = "Combat Indicators",
+            desc = "Small Icon indicating when target & focus are in combat",
+            type = "toggle",
+            width = "full",
+            order = 1,
+            set = function(info, val) UnitFrames:EnableCombatIndicator(val) end,
+         },
+         hideAttackGlowOnPlayerFrame = {
+            name = "Hide Combat Flashing",
+            desc = "Red flashing glow on player frame when in combat",
+            type = "toggle",
+            width = "full",
+            order = 2,
+            set = function(info, val) UnitFrames:HideAttackGlowOnPlayerFrame(val) end,
+         }
+      },
+      
+   },
 	--moveTargetOfTarget = {
 	--	name = "Move Target of Target and Focus Frame",
 	--	desc = "Moves target of target and focus frames so it's not hiding last debuff slot",
@@ -321,31 +393,8 @@ UnitFrames.optionsTable = {
 	--	order = 4,
 	--	set = function(info, val) UnitFrames:MoveTargetOfTarget(val) end,
 	--},
-	--hideRestingStatus = {
-	--	name = "Hide Resting Icon and Resting Glow",
-	--	desc = "Hiding icon which is showing that player is resting, also hiding yellow glow",
-	--	type = "toggle",
-	--	width = "full",
-	--	order = 5,
-	--	set = function(info, val) UnitFrames:HideRestingStatus(val) end,
-	--},
-	--classColors = {
-	--	name = "Class colors",
-	--	type = "multiselect",
-	--	order = 6,
-	--	get = function(info, val) return UnitFrames.db.classColors[val] end,
-	--	set = function(info, key, val)
-	--			UnitFrames.db.classColors[key] = val
-	--			UnitFrameHealthBar_Update(PlayerFrameHealthBar, "player")
-	--			UnitFrameHealthBar_Update(TargetFrameHealthBar, "target")
-	--			UnitFrameHealthBar_Update(FocusFrameHealthBar, "focus")
-	--		end,
-	--	values = {
-	--		"Player",
-	--		"Others",
-	--		"Tooltip",
-	--	},
-	--},
+	
+	
 	--unitFrameSize = {
 	--	name = "Cast Bars size",
 	--	type = "group",
@@ -393,4 +442,21 @@ UnitFrames.optionsTable = {
 	--		},
 	--	},
 	--},
+   classColors = {
+      name = "Class colors",
+      type = "multiselect",
+      order = 10,
+      get = function(info, val) return UnitFrames.db.classColors[val] end,
+      set = function(info, key, val)
+               UnitFrames.db.classColors[key] = val
+               UnitFrameHealthBar_Update(PlayerFrameHealthBar, "player")
+               UnitFrameHealthBar_Update(TargetFrameHealthBar, "target")
+               UnitFrameHealthBar_Update(FocusFrameHealthBar, "focus")
+            end,
+      values = {
+         "Player",
+         "Others",
+         "Tooltip",
+      },
+   },
 }
