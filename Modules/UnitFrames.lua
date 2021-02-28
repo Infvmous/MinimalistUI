@@ -38,11 +38,114 @@ function UnitFrames:OnLoad()
       self:HideRoleIcon(self.db.hideRoleIcon)
    end)
 
-   self:HideAttackGlowOnPlayerFrame(self.db.hideAttackGlowOnPlayerFrame)
+   -- Hide Leader and Guide icons for player frame
+   hooksecurefunc("PlayerFrame_UpdatePartyLeader", function()
+      PlayerLeaderIcon:Hide()
+      PlayerGuideIcon:Hide()
+   end)
+
+   -- Hide group leader icon for target and focus
+   hooksecurefunc("TargetFrame_Update", function()
+      targetFrame.leaderIcon:Hide()
+      focusFrame.leaderIcon:Hide()
+   end)
+
    self:HideFeedbackText(self.db.hideFeedbackText)
 	self:HidePvPIcons(self.db.hidePvpIcons)
 
-   
+   -- Hide gryphons
+   MainMenuBarArtFrame.RightEndCap:Hide()
+   MainMenuBarArtFrame.LeftEndCap:Hide()
+
+   -- Hide bags
+   MicroButtonAndBagsBar:Hide()
+
+   -- Move target of target frame to hide last buff slot on target
+   TargetFrameToT:ClearAllPoints()
+   TargetFrameToT:SetPoint("CENTER", TargetFrame, "Right", -50, -46)
+   FocusFrameToT:ClearAllPoints()
+   FocusFrameToT:SetPoint("CENTER", FocusFrame, "Right", -50, -46)
+
+   -- Increase cast bars
+   TargetFrameSpellBar:SetScale(1.15)
+   FocusFrameSpellBar:SetScale(1.15)
+
+   -- Hide character name
+   playerFrame.name:Hide()
+
+   --
+   PlayerAttackGlow:Hide()
+
+   -- Hide Server names in party frames
+   hooksecurefunc("CompactUnitFrame_UpdateName",function(frame)
+      if frame and not frame:IsForbidden() then
+         local frame_name = frame:GetName()
+         if frame_name and frame_name:match("^CompactRaidFrame%d") and frame.unit and frame.name then
+            local unit_name = GetUnitName(frame.unit, true)
+            if unit_name then
+               --frame.name:SetText(nil)
+               frame.name:SetText(unit_name:match("[^-]+"))
+            end
+         end
+      end
+   end)
+
+   -- Combo points on target
+   SetCVar("comboPointLocation", 1)
+
+   -- Arena 123 on arena
+   --local U = UnitIsUnit
+   --hooksecurefunc("CompactUnitFrame_UpdateName",function(F)
+   --   if IsActiveBattlefieldArena() and F.unit:find("nameplate") then
+   --      for i = 1,5 do
+   --         if U(F.unit,"arena"..i) then
+   --            F.name:SetText(i)
+   --            F.name:SetTextColor(1,1,0)
+   --            break
+   --         end
+   --      end
+   --   end
+   --end)
+
+   -- Hide minimap zoom icons
+   MinimapZoomIn:Hide()
+   MinimapZoomOut:Hide()
+
+   -- Enable zooming on minimap with scrollwheel
+   Minimap:EnableMouseWheel(true)
+   Minimap:SetScript("OnMouseWheel", function(self, arg1)
+      if arg1 > 0 then
+         Minimap_ZoomIn()
+      else
+         Minimap_ZoomOut()
+      end
+   end)
+
+   -- Hide glow
+   SetCVar("ffxGlow", 0)
+
+   -- Hide effects
+   SetCVar("ffxDeath", 0)
+   SetCVar("ffxNether", 0)
+
+   -- Hide loss of control background
+   LossOfControlFrame.blackBg:SetAlpha(0)
+   LossOfControlFrame.RedLineTop:SetAlpha(0)
+   LossOfControlFrame.RedLineBottom:SetAlpha(0)
+
+
+   --Move combo points to character name
+   --local _, playerClass = UnitClass("player")
+   --   if playerClass == "ROGUE" and GetCVar("comboPointLocation") == "2" then
+   --      hooksecurefunc(ComboPointPlayerFrame,"Setup", function()
+   --         ComboPointPlayerFrame:ClearAllPoints()
+   --         ComboPointPlayerFrame:SetPoint("CENTER", PlayerFrame, 56, 23.82)
+   --         ComboPointPlayerFrame.Background:Hide()
+   --         ComboPointPlayerFrame:SetScale(.9)
+   --      end)
+   --   end
+
+
 
 	--self:MoveTargetOfTarget(self.db.moveTargetOfTarget)
 
@@ -168,7 +271,7 @@ function UnitFrames:ToggleCombatIndicator(parentFrame, indicator, unit)
 	local unitEffectiveLevel = UnitEffectiveLevel(unit)
    if UnitAffectingCombat(unit) then
 		if unitEffectiveLevel < 0 then
-         unit.highLevelTexture:Hide()
+         --unit.highLevelTexture:Hide()
       end
       indicator:Show()
       parentFrame.levelText:Hide()
@@ -251,16 +354,19 @@ function UnitFrames:UpdateRestingStatus()
    end
 end
 
-function UnitFrames:HideAttackGlowOnPlayerFrame(hide)
-   self.db.hideAttackGlowOnPlayerFrame = hide
-   if hide then PlayerAttackGlow:Hide()
-   else PlayerAttackGlow:Show() end
-end
-
 function UnitFrames:HideRoleIcon(hide)
    self.db.hideRoleIcon = hide 
-   if hide then PlayerFrameRoleIcon:Hide()
-   else PlayerFrameRoleIcon:Show() end
+   if hide then
+      playerRoleIcon:Hide()
+   else
+      local role = UnitGroupRolesAssigned("player");
+      if role == "TANK" or role == "HEALER" or role == "DAMAGER" then
+         playerRoleIcon:SetTexCoord(GetTexCoordsForRoleSmallCircle(role));
+         playerRoleIcon:Show();
+      else
+         playerRoleIcon:Hide();
+      end
+   end
 end
 
 --function UnitFrames:HideFrameCombatFlashing(hide)
@@ -308,12 +414,10 @@ end
 
 UnitFrames.defaultSettings = {
 	combatIndicator = true,
-   hideAttackGlowOnPlayerFrame = true,
    hideFeedbackText = true,
 	hidePvpIcons = true,
    hideRestingStatus = true,
    hideRoleIcon = true,
-   --hideFrameCombatFlashing = true,
 	--moveTargetOfTarget = true,
 	
 	
@@ -374,14 +478,14 @@ UnitFrames.optionsTable = {
             order = 1,
             set = function(info, val) UnitFrames:EnableCombatIndicator(val) end,
          },
-         hideAttackGlowOnPlayerFrame = {
-            name = "Hide Combat Flashing",
-            desc = "Red flashing glow on player frame when in combat",
-            type = "toggle",
-            width = "full",
-            order = 2,
-            set = function(info, val) UnitFrames:HideAttackGlowOnPlayerFrame(val) end,
-         }
+         --hideAttackGlowOnPlayerFrame = {
+         --   name = "Hide Combat Flashing",
+         --   desc = "Red flashing glow on player frame when in combat",
+         --   type = "toggle",
+         --   width = "full",
+         --   order = 2,
+         --   set = function(info, val) UnitFrames:HideAttackGlowOnPlayerFrame(val) end,
+         --}
       },
       
    },
